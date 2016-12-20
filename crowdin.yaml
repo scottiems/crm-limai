@@ -1,0 +1,31 @@
+files:
+  - source: /include/language
+    translation: /%language%
+    languages_mapping:
+      language:
+        en: limai
+  - source: /include/SugarFields/Fields
+    translation: /%language%/
+    languages_mapping:
+      language:
+        en: limai
+  - source: /include/SugarObjects/implements
+    translation: /%language%/
+    languages_mapping:
+      language:
+        en: limai
+  - source: /include/SugarObjects/templates
+    translation: /%language%/
+    languages_mapping:
+      language:
+        en: limai
+  - source: /install/language
+    translation: /%language%/
+    languages_mapping:
+      language:
+        en: limai
+  - source: /modules/**en_us.lang.php
+    translation: /%language%/
+    languages_mapping:
+      language:
+        en: limai
