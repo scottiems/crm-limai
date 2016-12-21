@@ -1,11 +1,10 @@
 <?php
-if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
 /*********************************************************************************
  * SugarCRM Community Edition is a customer relationship management program developed by
  * SugarCRM, Inc. Copyright (C) 2004-2013 SugarCRM Inc.
-
+ *
  * SuiteCRM is an extension to SugarCRM Community Edition developed by Salesagility Ltd.
- * Copyright (C) 2011 - 2014 Salesagility Ltd.
+ * Copyright (C) 2011 - 2016 Salesagility Ltd.
  *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Affero General Public License version 3 as published by the
@@ -38,70 +37,64 @@ if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
  * display the words  "Powered by SugarCRM" and "Supercharged by SuiteCRM".
  ********************************************************************************/
 
-
-class jsLanguage {
-
-    /**
-     * Creates javascript versions of language files
-     */
-    function __construct() {
-    }
-
-    /**
-     * @deprecated deprecated since version 7.6, PHP4 Style Constructors are deprecated and will be remove in 7.8, please update your code, use __construct instead
-     */
-    function jsLanguage(){
-        $deprecatedMessage = 'PHP4 Style Constructors are deprecated and will be remove in 7.8, please update your code';
-        if(isset($GLOBALS['log'])) {
-            $GLOBALS['log']->deprecated($deprecatedMessage);
-        }
-        else {
-            trigger_error($deprecatedMessage, E_USER_DEPRECATED);
-        }
-        self::__construct();
-    }
-
-
-    static function createAppStringsCache($lang = 'en_us') {
-        // cn: bug 8242 - non-US langpack chokes
-        $app_strings = return_application_language($lang);
-        $app_list_strings = return_app_list_strings_language($lang);
-
-        $json = getJSONobj();
-        $app_list_strings_encoded = $json->encode($app_list_strings);
-        $app_strings_encoded = $json->encode($app_strings);
-
-        $str = <<<EOQ
-SUGAR.language.setLanguage('app_strings', $app_strings_encoded);
-SUGAR.language.setLanguage('app_list_strings', $app_list_strings_encoded);
-EOQ;
-
-        $cacheDir = create_cache_directory('jsLanguage/');
-        if($fh = @sugar_fopen($cacheDir . $lang . '.js', "w")){
-            fputs($fh, $str);
-            fclose($fh);
-        }
-    }
-
-    static function createModuleStringsCache($moduleDir, $lang = 'en_us', $return = false) {
-        $json = getJSONobj();
-
-        // cn: bug 8242 - non-US langpack chokes
-        $mod_strings = return_module_language($lang, $moduleDir);
-        $mod_strings_encoded = $json->encode($mod_strings);
-        $str = "SUGAR.language.setLanguage('" . $moduleDir . "', " . $mod_strings_encoded . ");";
-
-        $cacheDir = create_cache_directory('jsLanguage/' . $moduleDir . '/');
-
-        if($fh = @fopen($cacheDir . $lang . '.js', "w")){
-            fputs($fh, $str);
-            fclose($fh);
-        }
-
-        if($return) {
-            return $str;
-        }
-    }
-
+if (!defined('sugarEntry') || !sugarEntry) {
+    die('Not A Valid Entry Point');
 }
-?>
+
+/**
+ * Retrieves the requested js language file, building it if it doesn't exist.
+ */
+function getJSLanguage()
+{
+    require_once 'include/language/jsLanguage.php';
+
+    global $app_list_strings;
+
+    if (empty($_REQUEST['lang'])) {
+        echo 'No language specified';
+
+        return;
+    }
+
+    $lang = clean_path($_REQUEST['lang']);
+    $languages = get_languages();
+
+    if (!preg_match("/^\w\w_\w\w$/", $lang) || !isset($languages[$lang])) {
+        if (!preg_match("/^\w\w_\w\w$/", $lang)) {
+            echo 'did not match regex<br/>';
+        } else {
+            echo  "$lang was not in list . <pre>".print_r($languages, true).'</pre>';
+        }
+        echo 'Invalid language specified';
+
+        return;
+    }
+    if (empty($_REQUEST['module']) || $_REQUEST['module'] === 'app_strings') {
+        $file = sugar_cached('jsLanguage/').$lang.'.js';
+        if (!sugar_is_file($file)) {
+            jsLanguage::createAppStringsCache($lang);
+        }
+    } else {
+        $module = clean_path($_REQUEST['module']);
+        $fullModuleList = array_merge($GLOBALS['moduleList'], $GLOBALS['modInvisList']);
+        if (!isset($app_list_strings['moduleList'][$module]) && !in_array($module, $fullModuleList)) {
+            echo 'Invalid module specified';
+
+            return;
+        }
+        $file = sugar_cached('jsLanguage/').$module.'/'.$lang.'.js';
+        if (!sugar_is_file($file)) {
+            jsLanguage::createModuleStringsCache($module, $lang);
+        }
+    }
+
+    //Setup cache headers
+    header('Content-Type: application/javascript');
+    header('Cache-Control: max-age=31556940, private');
+    header('Pragma: ');
+    header('Expires: '.gmdate('D, d M Y H:i:s \G\M\T', time() + 31556940));
+
+    readfile($file);
+}
+
+getJSLanguage();
